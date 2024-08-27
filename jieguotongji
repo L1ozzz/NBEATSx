@@ -1,0 +1,377 @@
+model = Nbeats(input_size_multiplier=30,  # Last 7 days
+               output_size=1,  # Predict 1 day
+               shared_weights=False,
+               initialization='he_normal',#'he_uniform'
+               activation='relu',
+               stack_types=['seasonality']+['identity']+ ['exogenous_lstm']+['trend'] ,
+               n_blocks=[3, 3, 3, 3],
+               n_layers=[2, 2, 4, 2],
+               n_hidden=[[1024, 1024], [1024, 1024], [1024,1024,1024,1024], [1024,1024]],
+               n_harmonics=0,  # not used with exogenous_tcn
+               n_polynomials=0,  # not used with exogenous_tcn
+               x_s_n_hidden=0,
+               exogenous_n_channels=9,
+               include_var_dict=include_var_dict,
+               t_cols=ts_dataset.t_cols,
+               batch_normalization=True,
+               dropout_prob_theta=0.2,
+               dropout_prob_exogenous=0.2,
+               learning_rate=0.0001,
+               lr_decay=0.6,
+               n_lr_decay_steps=5,
+               early_stopping=10,
+               weight_decay=0,
+               l1_theta=0,
+               n_iterations=5000,
+               loss='MAE',
+               loss_hypar=0.5,
+               val_loss='MAE',
+               seasonality=7,  # not used: only used with MASE loss
+               random_seed=1)
+
+MSE: 2.7766
+MAE: 1.1447
+MAPE: 2.37%
+MAPE Loss: 0.0174
+MSE Loss: 2.0402
+SMAPE Loss: 0.0175
+MAE Loss: 0.7784
+Pinball Loss: 0.3892
+
+
+model = Nbeats(input_size_multiplier=30,  # Last 7 days
+               output_size=1,  # Predict 1 day
+               shared_weights=False,
+               initialization='he_normal',#'he_uniform'
+               activation='relu',
+               stack_types=['seasonality']+['identity']+ ['exogenous_lstm']+['trend'] + ['exogenous_tcn'],
+               n_blocks=[3, 3, 6, 3,4],
+               n_layers=[2, 2, 16, 2,8],
+               n_hidden=[[1024, 1024], [1024, 1024], [2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048,2048], [2048,2048],[2048,2048,2048,2048,2048,2048,2048,2048]],
+               n_harmonics=0,  # not used with exogenous_tcn
+               n_polynomials=0,  # not used with exogenous_tcn
+               x_s_n_hidden=0,
+               exogenous_n_channels=9,
+               include_var_dict=include_var_dict,
+               t_cols=ts_dataset.t_cols,
+               batch_normalization=True,
+               dropout_prob_theta=0.2,
+               dropout_prob_exogenous=0.2,
+               learning_rate=0.0001,
+               lr_decay=0.6,
+               n_lr_decay_steps=5,
+               early_stopping=10,
+               weight_decay=0,
+               l1_theta=0,
+               n_iterations=5000,
+               loss='MAE',
+               loss_hypar=0.5,
+               val_loss='MAE',
+               seasonality=7,  # not used: only used with MASE loss
+               random_seed=1)
+
+
+
+
+[45.615, 45.631153, 45.10216, 44.52787, 44.777893, 45.50424, 50.508827]
+[45.2 44.7 44.5 45.8 50.4 48.  46.8]
+2024-08-15 01:39:47.629376: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'cudart64_110.dll'; dlerror: cudart64_110.dll not found
+2024-08-15 01:39:47.629823: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'cublas64_11.dll'; dlerror: cublas64_11.dll not found
+2024-08-15 01:39:47.630209: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'cublasLt64_11.dll'; dlerror: cublasLt64_11.dll not found
+2024-08-15 01:39:47.630676: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'cufft64_10.dll'; dlerror: cufft64_10.dll not found
+2024-08-15 01:39:47.631044: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'cusparse64_11.dll'; dlerror: cusparse64_11.dll not found
+2024-08-15 01:39:47.631164: W tensorflow/core/common_runtime/gpu/gpu_device.cc:1850] Cannot dlopen some GPU libraries. Please make sure the missing libraries mentioned above are installed properly if you would like to use GPU. Follow the guide at https://www.tensorflow.org/install/gpu for how to download and setup the required libraries for your platform.
+Skipping registering GPU devices...
+2024-08-15 01:39:47.631721: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX AVX2
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+MSE: 7.8018
+MAE: 2.1496
+MAPE: 4.49%
+
+Best parameters: [7.424908231815013e-05, 0.19219085364634997, 0.14876730327223617, 0.0005671297731744319]
+
+
+MSE: 8.2961
+MAE: 2.0605
+MAPE: 4.27%
+
+Best parameters: [0.00024980966294761486, 0.2567522175319841, 0.32260225046393026, 0.01, 0.30263240915435385] Best MAE: 0.635988175868988
+MSE: 3.4124
+MAE: 1.6023
+MAPE: 3.40%
+
+train_loader = TimeSeriesLoader(model='nbeats',
+                                ts_dataset=ts_dataset,
+                                window_sampling_limit=365*20,  # 4 years of data
+                                offset=0,
+                                input_size=30,  # Last 7 days
+                                output_size=1,  # Predict 1 day
+                                idx_to_sample_freq=1,  # Sampling frequency of 1 day
+                                batch_size=1024,
+                                is_train_loader=True,
+                                shuffle=True)
+
+# 验证加载器（注意：在此示例中，我们还对预测期进行了验证）
+
+val_loader = TimeSeriesLoader(model='nbeats',
+                              ts_dataset=ts_dataset,
+                              window_sampling_limit=365*20,  # 4 years of data
+                              offset=0,
+                              input_size=30,  # Last 7 days
+                              output_size=1,  # Predict 1 day
+                              idx_to_sample_freq=1,  # Sampling frequency of 1 day
+                              batch_size=1024,
+                              is_train_loader=False,
+                              shuffle=False)
+
+print(dir(val_loader))
+# 包含要包含的滞后变量的字典。
+include_var_dict = { 'y': list(range(-7, -1)),  # 过去30天的土壤湿度
+                    'GustDir': list(range(-7, 0)),
+                    'GustSpd': list(range(-7, 0)),
+                    'WindRun': list(range(-7, 0)),
+                    'Rain': list(range(-7, 0)),
+                    'Tmean': list(range(-7, 0)),
+                    'Tmax': list(range(-7, 0)),
+                    'Tmin': list(range(-7, 0)),
+                    'Tgmin': list(range(-7, 0)),
+                    'VapPress': list(range(-7, 0)),
+                    'ET10': list(range(-7, 0)),
+                    'Rad': list(range(-7, 0)),
+                    'week_day': [-1]}  # Last day of the week
+
+model = Nbeats(input_size_multiplier=30,  # Last 7 days
+               output_size=1,  # Predict 1 day
+               shared_weights=False,
+               initialization='he_normal',#'he_uniform'
+               activation='relu',
+               stack_types=['seasonality']+['identity']+ ['exogenous']+ ['exogenous_lstm']+['trend'] ,
+               n_blocks=[4, 4, 4, 4, 4],
+               n_layers=[4, 4, 4, 8, 4],
+               n_hidden=[[1024, 1024,1024, 1024], [1024, 1024,1024, 1024],[1024, 1024,1024, 1024], [1024,1024,1024,1024,1024,1024,1024,1024], [1024,1024,1024,1024]],
+               #stack_types=['seasonality']+['identity']+ ['exogenous_lstm'],
+               #n_blocks=[4, 4, 4], n_layers=[4, 4, 16],
+               #n_hidden=[[1024, 1024, 1024, 1024], [1024, 1024, 1024, 1024],  [1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024,1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024]],
+               n_harmonics=0,  # not used with exogenous_tcn
+               n_polynomials=0,  # not used with exogenous_tcn
+               x_s_n_hidden=0,
+               exogenous_n_channels=len(string_cols),
+               include_var_dict=include_var_dict,
+               t_cols=ts_dataset.t_cols,
+               batch_normalization=True,
+               dropout_prob_theta=0.2567522,
+               dropout_prob_exogenous=0.32260225,
+               learning_rate=0.000249809,
+               lr_decay=0.3026324,
+               n_lr_decay_steps=3,
+               early_stopping=10,
+               weight_decay=0.01,
+               l1_theta=0,
+               n_iterations=5000,
+               loss='MAE',
+               loss_hypar=0.5,
+               val_loss='MAE',
+               seasonality=7,  # not used: only used with MASE loss
+               random_seed=1)
+
+
+Best parameters: [0.00034382337665123715, 0.5, 0.0, 0.01, 0.3667177446835557] Best MAE: 0.7018190622329712
+
+# 打印 t_cols 确认
+#print(ts_dataset.t_cols)
+# 加载对象。采样数据集对象的窗口。
+# 有关每个参数的更多信息，请参阅 Loader 对象上的注释。
+train_loader = TimeSeriesLoader(model='nbeats',
+                                ts_dataset=ts_dataset,
+                                window_sampling_limit=365*20,  # 4 years of data
+                                offset=0,
+                                input_size=30,  # Last 7 days
+                                output_size=1,  # Predict 1 day
+                                idx_to_sample_freq=1,  # Sampling frequency of 1 day
+                                batch_size=1024,
+                                is_train_loader=True,
+                                shuffle=True)
+
+# 验证加载器（注意：在此示例中，我们还对预测期进行了验证）
+
+val_loader = TimeSeriesLoader(model='nbeats',
+                              ts_dataset=ts_dataset,
+                              window_sampling_limit=365*20,  # 4 years of data
+                              offset=0,
+                              input_size=30,  # Last 7 days
+                              output_size=1,  # Predict 1 day
+                              idx_to_sample_freq=1,  # Sampling frequency of 1 day
+                              batch_size=1024,
+                              is_train_loader=False,
+                              shuffle=False)
+
+print(dir(val_loader))
+# 包含要包含的滞后变量的字典。
+include_var_dict = { 'y': list(range(-7, -1)),  # 过去30天的土壤湿度
+                    'GustDir': list(range(-7, 0)),
+                    'GustSpd': list(range(-7, 0)),
+                    'WindRun': list(range(-7, 0)),
+                    'Rain': list(range(-7, 0)),
+                    'Tmean': list(range(-7, 0)),
+                    'Tmax': list(range(-7, 0)),
+                    'Tmin': list(range(-7, 0)),
+                    'Tgmin': list(range(-7, 0)),
+                    'VapPress': list(range(-7, 0)),
+                    'ET10': list(range(-7, 0)),
+                    'Rad': list(range(-7, 0)),
+                    'week_day': [-1]}  # Last day of the week
+
+model = Nbeats(input_size_multiplier=30,  # Last 7 days
+               output_size=1,  # Predict 1 day
+               shared_weights=False,
+               initialization='he_normal',#'he_uniform'
+               activation='relu',
+               stack_types=['seasonality']+['identity']+ ['exogenous']+ ['exogenous_lstm']+['trend'] ,
+               n_blocks=[4, 4, 4, 4, 4],
+               n_layers=[4, 4, 4, 8, 4],
+               n_hidden=[[1024, 1024,1024, 1024], [1024, 1024,1024, 1024],[1024, 1024,1024, 1024], [1024,1024,1024,1024,1024,1024,1024,1024], [1024,1024,1024,1024]],
+               #stack_types=['seasonality']+['identity']+ ['exogenous_lstm'],
+               #n_blocks=[4, 4, 4], n_layers=[4, 4, 16],
+               #n_hidden=[[1024, 1024, 1024, 1024], [1024, 1024, 1024, 1024],  [1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024,1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024]],
+               n_harmonics=0,  # not used with exogenous_tcn
+               n_polynomials=0,  # not used with exogenous_tcn
+               x_s_n_hidden=0,
+               exogenous_n_channels=len(string_cols),
+               include_var_dict=include_var_dict,
+               t_cols=ts_dataset.t_cols,
+               batch_normalization=True,
+               dropout_prob_theta=0.5,
+               dropout_prob_exogenous=0,
+               learning_rate=0.000343823,
+               lr_decay=0.3667177,
+               n_lr_decay_steps=3,
+               early_stopping=10,
+               weight_decay=0.01,
+               l1_theta=0,
+               n_iterations=5000,
+               loss='MAE',
+               loss_hypar=0.5,
+               val_loss='MAE',
+               seasonality=7,  # not used: only used with MASE loss
+               random_seed=1)
+
+
+Best parameters: [0.0009779931763847919, 0.5, 0.5, 0.005007724710918442, 0.9] Best MAE: 0.7455252408981323
+
+
+
+[2.9332760893356083e-05, 0.4374037034004458, 0.20009262405290784, 0.006536703155471765, 0.7602194097987933] Best MAE: 0.8469723463058472
+
+Best parameters: [2.551245837107667e-05, 0.4507407596628024, 0.47626106178085914, 0.004997338907399126, 0.8929826256256415] Best MAE: 0.8448747396469116
+
+
+目前性能最好的模型参数：
+train_mask = np.ones(len(Y_df))
+train_mask[-3587:] = 0 # Last week of data (168 hours)
+#train_mask[-3600:] = 0
+
+ts_dataset = TimeSeriesDataset(Y_df=Y_df, X_df=X_df, S_df=S_df, ts_train_mask=train_mask)
+
+
+# Handling numerical and string data dynamically
+numerical_cols = X_df.select_dtypes(include=[np.number]).columns
+string_cols = X_df.select_dtypes(include=[object, 'category']).columns
+label_encoders = {}
+for col in string_cols:
+    le = LabelEncoder()
+    X_df[col] = le.fit_transform(X_df[col].astype(str))
+    label_encoders[col] = le
+
+'''
+his_data_x = Y_df.iloc[-(8 + 7):-7]
+new_ = his_data_x.iloc[-1].copy()  # 复制最后一行以保持结构
+print(new_[0])
+print(new_['ds'])
+'''
+#new_entry['ds'] = future_dates[i]  # 更新日期为未来日期
+#new_entry['y'] = actuals[i]  # 使用实际值而非预测值
+    # 转换 unique_id 为整数，递增后转换回字符串
+#new_['unique_id'] = str(int(his_data_x['unique_id'].iloc[-1]) + 1)
+
+# 打印 t_cols 确认
+#print(ts_dataset.t_cols)
+# 加载对象。采样数据集对象的窗口。
+# 有关每个参数的更多信息，请参阅 Loader 对象上的注释。
+train_loader = TimeSeriesLoader(model='nbeats',
+                                ts_dataset=ts_dataset,
+                                window_sampling_limit=8969,  # 4 years of data
+                                offset=0,
+                                input_size=30,  # Last 7 days
+                                output_size=1,  # Predict 1 day
+                                idx_to_sample_freq=1,  # Sampling frequency of 1 day
+                                batch_size=1024,
+                                is_train_loader=True,
+                                shuffle=True)
+
+# 验证加载器（注意：在此示例中，我们还对预测期进行了验证）
+
+val_loader = TimeSeriesLoader(model='nbeats',
+                              ts_dataset=ts_dataset,
+                              window_sampling_limit=8969,  # 4 years of data
+                              offset=0,
+                              input_size=30,  # Last 7 days
+                              output_size=1,  # Predict 1 day
+                              idx_to_sample_freq=1,  # Sampling frequency of 1 day
+                              batch_size=1024,
+                              is_train_loader=False,
+                              shuffle=False)
+
+print(dir(val_loader))
+# 包含要包含的滞后变量的字典。
+include_var_dict = { 'y': list(range(-7, -1)),  # 过去30天的土壤湿度
+                    'GustDir': list(range(-7, 0)),
+                    'GustSpd': list(range(-7, 0)),
+                    'WindRun': list(range(-7, 0)),
+                    'Rain': list(range(-7, 0)),
+                    'Tmean': list(range(-7, 0)),
+                    'Tmax': list(range(-7, 0)),
+                    'Tmin': list(range(-7, 0)),
+                    'Tgmin': list(range(-7, 0)),
+                    'VapPress': list(range(-7, 0)),
+                    'ET10': list(range(-7, 0)),
+                    'Rad': list(range(-7, 0)),
+                    'week_day': [-1]}  # Last day of the week
+
+model = Nbeats(input_size_multiplier=30,  # Last 7 days
+               output_size=1,  # Predict 1 day
+               shared_weights=False,
+               initialization='he_normal',#'he_uniform'
+               activation='relu',
+               stack_types=['seasonality']+['identity']+ ['exogenous']+ ['exogenous_lstm']+['trend'] ,
+               n_blocks=[4, 4, 4, 4, 4],
+               n_layers=[4, 4, 4, 8, 4],
+               n_hidden=[[1024, 1024,1024, 1024], [1024, 1024,1024, 1024],[1024, 1024,1024, 1024], [1024,1024,1024,1024,1024,1024,1024,1024], [1024,1024,1024,1024]],
+               #stack_types=['seasonality']+['identity']+ ['exogenous_lstm'],
+               #n_blocks=[4, 4, 4], n_layers=[4, 4, 16],
+               #n_hidden=[[1024, 1024, 1024, 1024], [1024, 1024, 1024, 1024],  [1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024,1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024]],
+               n_harmonics=0,  # not used with exogenous_tcn
+               n_polynomials=0,  # not used with exogenous_tcn
+               x_s_n_hidden=0,
+               exogenous_n_channels=len(string_cols),
+               include_var_dict=include_var_dict,
+               t_cols=ts_dataset.t_cols,
+               batch_normalization=True,
+               dropout_prob_theta=0.5,
+               dropout_prob_exogenous=0.5,
+               learning_rate=0.000977993,
+               lr_decay=0.9,
+               n_lr_decay_steps=3,
+               early_stopping=10,
+               weight_decay=0.00500772,
+               l1_theta=0,
+               n_iterations=5000,
+               loss='MAE',
+               loss_hypar=0.5,
+               val_loss='MAE',
+               seasonality=7,  # not used: only used with MASE loss
+               random_seed=1)
+
+
+Best parameters: [0.00017194565174168618, 0.3202366646197745, 0.04118847345421257, 0.008134995760391452, 0.5211219213027775] Best MAE: 0.8433337807655334
+
+Best parameters: [0.0001679911199289873, 0.5, 0.0, 0.01, 0.9, 0.29456459877397756, 0.0] Best MAE: 0.7950634360313416
