@@ -374,4 +374,40 @@ model = Nbeats(input_size_multiplier=30,  # Last 7 days
 
 Best parameters: [0.00017194565174168618, 0.3202366646197745, 0.04118847345421257, 0.008134995760391452, 0.5211219213027775] Best MAE: 0.8433337807655334
 
+下面这个的顺序是    Real(1e-6, 1e-3, "log-uniform", name='learning_rate'),
+    Real(0.0, 0.5, name='dropout_prob_theta'),
+    Real(0.0, 0.5, name='dropout_prob_exogenous'),
+    Real(0.0, 0.01, name='weight_decay'),
+    Real(0.0, 0.9, name='lr_decay'),
+    Real(0.0, 0.6, name='loss_hypar'),
+    Real(0.0, 0.5, name='l1_theta')这样子的
 Best parameters: [0.0001679911199289873, 0.5, 0.0, 0.01, 0.9, 0.29456459877397756, 0.0] Best MAE: 0.7950634360313416
+
+
+{'learning_rate': 9.521607843815635e-05, 'dropout_prob_theta': 0.17691603352702848, 'dropout_prob_exogenous': 0.017973880923195844, 'weight_decay': 0.005400583579233793, 'lr_decay': 0.7023209392085263, 'n_blocks': 4, 'n_layers': 2, 'n_hidden_units': 1482}
+'learning_rate': 0.000789352321936725, 'dropout_prob_theta': 0.5, 'dropout_prob_exogenous': 5.031684749008289e-05, 'weight_decay': 0.01, 'lr_decay': 0.18745260957663498, 'n_blocks': 6, 'n_layers': 2, 'n_hidden_units': 1500}
+
+
+[45.923985, 45.386284, 44.79301, 44.291447, 50.296658, 45.74848, 49.77605]
+[45.2 44.7 44.5 45.8 50.4 48.  46.8]
+MSE: 2.4705
+MAE: 1.2204
+MAPE: 2.62%
+
+MSE: 2.8767
+MAE: 1.3349
+MAPE: 2.86%
+
+MSE: 2.8225
+MAE: 1.3374
+MAPE: 2.85%
+
+[45.792896, 45.218372, 44.804485, 44.36755, 51.141438, 45.736084, 50.098995]
+[45.2 44.7 44.5 45.8 50.4 48.  46.8]
+MSE: 2.7605
+MAE: 1.3075
+MAPE: 2.79%
+
+MSE: 2.8559
+MAE: 1.2930
+MAPE: 2.78%

@@ -375,9 +375,13 @@ class Nbeats(object):
                                                    x_s_n_hidden=self.x_s_n_hidden,
                                                    theta_n_dim=2 * self.exogenous_n_channels,
                                                    basis=ExogenousBasisLSTM(input_size=self.n_x_t,
-                                                                            hidden_size=64,
-                                                                            num_layers=2,
-                                                                            dropout_prob=self.dropout_prob_theta),
+                                                                            #hidden_size=64,
+                                                                            #num_layers=2,
+                                                                            hidden_size= self.n_hidden[i][0],
+                                                                            num_layers=self.n_layers[i],
+                                                                            dropout_prob=self.dropout_prob_theta,
+                                                                            theta_size= 2 * self.exogenous_n_channels
+                                                                            ),
                                                    n_layers=self.n_layers[i],
                                                    theta_n_hidden=self.n_hidden[i],
                                                    include_var_dict=self.include_var_dict,
@@ -542,9 +546,25 @@ class Nbeats(object):
                 training_loss = training_loss_fn(x=insample_y, loss_hypar=self.loss_hypar, forecast=forecast,
                                                  target=outsample_y, mask=outsample_mask)
 
+
                 # Protection if exploding gradients
-                if not np.isnan(float(training_loss)):
+                # 获取训练损失的数值
+                training_loss_value = training_loss.detach().cpu().item()
+
+                if not np.isnan(training_loss_value):
+                    # 反向传播
                     training_loss.backward()
+
+                    # 计算并打印总的梯度范数
+                    total_norm = 0
+                    for p in self.model.parameters():
+                        if p.grad is not None:
+                            param_norm = p.grad.data.norm(2)
+                            total_norm += param_norm.item() ** 2
+                    total_norm = total_norm ** 0.5
+                    #print(f"Total gradient norm: {total_norm}")
+
+                    # 梯度裁剪（可选）
                     t.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
                     optimizer.step()
                 else:
@@ -677,3 +697,4 @@ class Nbeats(object):
         checkpoint = t.load(model_file, map_location=self.device)
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.model.to(self.device)
+

@@ -13,7 +13,7 @@ def filter_input_vars(insample_y, insample_x_t, outsample_x_t, t_cols, include_v
         device = insample_x_t.get_device()
     else:
         device = 'cpu'
-    #print(device)
+    #print("device is:", device)
     outsample_y = t.zeros((insample_y.shape[0], 1, outsample_x_t.shape[2])).to(device)
 
     insample_y_aux = t.unsqueeze(insample_y,dim=1)
@@ -23,7 +23,7 @@ def filter_input_vars(insample_y, insample_x_t, outsample_x_t, t_cols, include_v
     x_t = t.cat([insample_x_t_aux, outsample_x_t_aux], dim=-1)
     batch_size, n_channels, input_size = x_t.shape
 
-    assert input_size == 31, f'input_size {input_size} not 31'
+    assert input_size == 8, f'input_size {input_size} not 31'
 
     x_t = x_t.reshape(batch_size, n_channels, input_size, 1)
 
@@ -154,6 +154,8 @@ class NBeats(nn.Module):
         for i, block in enumerate(self.blocks):
             backcast, block_forecast = block(insample_y=residuals, insample_x_t=insample_x_t,
                                              outsample_x_t=outsample_x_t, x_s=x_s)
+            #print("residual",residuals.shape)
+            #print("backcast",backcast.shape)
             residuals = (residuals - backcast) * insample_mask
             forecast = forecast + block_forecast
             # 确保所有预测都扩展到同一尺寸
@@ -218,8 +220,16 @@ class TrendBasis(nn.Module):
 
     def forward(self, theta: t.Tensor, insample_x_t: t.Tensor, outsample_x_t: t.Tensor) -> Tuple[t.Tensor, t.Tensor]:
         cut_point = self.forecast_basis.shape[0]
+        #print('TrendBasis theta shape:', theta.shape)
+        #print('TrendBasis cut_point:', cut_point)
+        #print('TrendBasis backcast_basis shape:', self.backcast_basis.shape)
+        #print('TrendBasis forecast_basis shape:', self.forecast_basis.shape)
+
         backcast = t.einsum('bp,pt->bt', theta[:, cut_point:], self.backcast_basis)
         forecast = t.einsum('bp,pt->bt', theta[:, :cut_point], self.forecast_basis)
+
+        #print('TrendBasis backcast shape:', backcast.shape)
+        #print('TrendBasis forecast shape:', forecast.shape)
         return backcast, forecast
 
 class SeasonalityBasis(nn.Module):
@@ -391,6 +401,73 @@ class ExogenousBasisLSTM(nn.Module):
         '''
 
 class ExogenousBasisLSTM(nn.Module):
+    def __init__(self, input_size, hidden_size, num_layers, dropout_prob, theta_size):
+        super(ExogenousBasisLSTM, self).__init__()
+        self.theta_size = theta_size
+        self.lstm_block = LSTMBlock(input_size=input_size, hidden_size=hidden_size,
+                                    output_size=theta_size, num_layers=num_layers,
+                                    dropout_prob=dropout_prob)
+    '''
+    @property
+    def weight(self):
+        # 返回所有内部需要正则化的权重
+        return [self.lstm_block.lstm.weight_ih_l0,
+                self.lstm_block.lstm.weight_hh_l0,
+                self.lstm_block.fc.weight]
+    '''
+
+    @property
+    def weight(self):
+        weights = []
+        lstm = self.lstm_block.lstm
+        num_layers = lstm.num_layers
+        for layer_idx in range(num_layers):
+            weights.append(getattr(lstm, f'weight_ih_l{layer_idx}'))
+            weights.append(getattr(lstm, f'weight_hh_l{layer_idx}'))
+        weights.append(self.lstm_block.fc.weight)
+        return weights
+
+    def forward(self, theta: torch.Tensor, insample_x_t: torch.Tensor, outsample_x_t: torch.Tensor):
+        x_t = torch.cat([insample_x_t, outsample_x_t], dim=2)  # x_t: [batch_size, input_size, seq_length]
+        x_t = x_t.permute(0, 2, 1)  # 调整维度为 [batch_size, seq_length, input_size]
+        lstm_out = self.lstm_block(x_t)  # lstm_out: [batch_size, seq_length, theta_size]
+
+        # 将 LSTM 输出分为 backcast 和 forecast
+        insample_length = insample_x_t.shape[2]
+        backcast_basis = lstm_out[:, :insample_length, :]  # [batch_size, insample_length, theta_size]
+        forecast_basis = lstm_out[:, insample_length:, :]  # [batch_size, outsample_length, theta_size]
+
+        # 对 theta 进行分割
+        theta_backcast = theta[:, :theta.shape[1] // 2]  # 假设 theta 的前一半用于 backcast
+        theta_forecast = theta[:, theta.shape[1] // 2:]  # 后一半用于 forecast
+
+        # 将 theta 扩展到时间维度
+        theta_backcast = theta_backcast.unsqueeze(1)  # [batch_size, 1, theta_size]
+        theta_forecast = theta_forecast.unsqueeze(1)  # [batch_size, 1, theta_size]
+
+        # 计算 backcast 和 forecast
+        # 使用逐元素乘法，然后在时间维度上求和
+        backcast = (backcast_basis * theta_backcast).sum(dim=2)  # [batch_size, insample_length]
+        #backcast = backcast.mean(dim=2)  # [batch_size]
+
+        forecast = (forecast_basis * theta_forecast).sum(dim=2)  # [batch_size, outsample_length]
+        #forecast = forecast.mean(dim=2)  # [batch_size]
+
+        #print("LSTM backcast:",backcast.shape)
+        #print("LSTM forecast:",forecast.shape)
+
+
+
+
+        # 计算 backcast 和 forecast
+        #backcast = torch.einsum('bts,bh->bt', backcast_basis, theta_backcast)
+        #forecast = torch.einsum('bts,bh->bt', forecast_basis, theta_forecast)
+
+        return backcast, forecast
+
+
+'''
+class ExogenousBasisLSTM(nn.Module):
     def __init__(self, input_size=31, hidden_size=64, num_layers=1, dropout_prob=0.2, theta_size=36):
         super(ExogenousBasisLSTM, self).__init__()
         output_size = theta_size // 2  # 设定输出大小为 theta 的一半
@@ -424,5 +501,5 @@ class ExogenousBasisLSTM(nn.Module):
         #print(backcast.shape)  # 应该显示 [1024, 30]
         #print(forecast.shape)  # 应该显示 [1024, 30]
         return backcast, forecast
-
+    '''
 

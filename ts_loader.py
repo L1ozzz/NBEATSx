@@ -96,6 +96,8 @@ class TimeSeriesLoader(object):
             sample_idxs = np.random.choice(a=self.windows_sampling_idx, size=len(self.windows_sampling_idx), replace=False)
         else:
             sample_idxs = self.windows_sampling_idx
+            #print(len(sample_idxs))
+            #print(len(self.windows_sampling_idx))
             #print("this is: ",sample_idxs)
 
         #print(sample_idxs)

@@ -14,7 +14,7 @@ from sklearn.preprocessing import StandardScaler, LabelEncoder
 
 # 加载本地数据
 directory='./data'
-filename='updated_processed_weather_data.csv'
+filename='imputed_data_ITer.csv'
 Y_df, X_df, S_df = EPF.load(directory,filename)
 #print(S_df)
 #print(Y_df.head)
@@ -32,7 +32,7 @@ X_df[numerical_cols] = scaler.fit_transform(X_df[numerical_cols])
 '''
 # train_mask: 1 to keep, 0 to mask
 train_mask = np.ones(len(Y_df))
-train_mask[-3500:] = 0 # Last week of data (168 hours)
+train_mask[-3587:] = 0 # Last week of data (168 hours)
 #train_mask[-3600:] = 0
 
 ts_dataset = TimeSeriesDataset(Y_df=Y_df, X_df=X_df, S_df=S_df, ts_train_mask=train_mask)
@@ -64,31 +64,31 @@ print(new_['ds'])
 # 有关每个参数的更多信息，请参阅 Loader 对象上的注释。
 train_loader = TimeSeriesLoader(model='nbeats',
                                 ts_dataset=ts_dataset,
-                                window_sampling_limit=8969,  # 4 years of data
+                                window_sampling_limit=5382,  # 4 years of data
                                 offset=0,
-                                input_size=30,  # Last 7 days
+                                input_size=7,  # Last 7 days
                                 output_size=1,  # Predict 1 day
                                 idx_to_sample_freq=1,  # Sampling frequency of 1 day
-                                batch_size=512,
+                                batch_size=1024,
                                 is_train_loader=True,
-                                shuffle=True)
+                                shuffle=False)
 
 # 验证加载器（注意：在此示例中，我们还对预测期进行了验证）
 
 val_loader = TimeSeriesLoader(model='nbeats',
                               ts_dataset=ts_dataset,
-                              window_sampling_limit=8969,  # 4 years of data
+                              window_sampling_limit=3587,  # 4 years of data
                               offset=0,
-                              input_size=30,  # Last 7 days
+                              input_size=7,  # Last 7 days
                               output_size=1,  # Predict 1 day
                               idx_to_sample_freq=1,  # Sampling frequency of 1 day
-                              batch_size=512,
+                              batch_size=1024,
                               is_train_loader=False,
                               shuffle=False)
 
 print(dir(val_loader))
 # 包含要包含的滞后变量的字典。
-include_var_dict = { 'y': list(range(-7, -1)),  # 过去30天的土壤湿度
+include_var_dict = { 'y': list(range(-7, 0)),  # 过去30天的土壤湿度
                     'GustDir': list(range(-7, 0)),
                     'GustSpd': list(range(-7, 0)),
                     'WindRun': list(range(-7, 0)),
@@ -102,45 +102,45 @@ include_var_dict = { 'y': list(range(-7, -1)),  # 过去30天的土壤湿度
                     'Rad': list(range(-7, 0)),
                     'week_day': [-1]}  # Last day of the week
 
-model = Nbeats(input_size_multiplier=30,  # Last 7 days
+model = Nbeats(input_size_multiplier=7,  # Last 7 days
                output_size=1,  # Predict 1 day
                shared_weights=False,
                initialization='he_normal',#'he_uniform'
                activation='relu',
-               stack_types=['seasonality']+['identity']+ ['exogenous']+ ['exogenous_lstm']+['trend'] ,
-               n_blocks=[4, 4, 4, 4, 4],
-               n_layers=[4, 4, 4, 8, 4],
-               n_hidden=[[1024, 1024,1024, 1024], [1024, 1024,1024, 1024],[1024, 1024,1024, 1024], [1024,1024,1024,1024,1024,1024,1024,1024], [1024,1024,1024,1024]],
+               stack_types=['seasonality']+['identity']+ ['exogenous_lstm']+['trend'] ,
+               n_blocks=[4, 4, 4, 4],
+               n_layers=[4, 4, 3, 4],
+               n_hidden=[[1024, 1024,1024, 1024], [1024, 1024,1024, 1024],[512,512,512], [1024,1024,1024,1024]],
                #stack_types=['seasonality']+['identity']+ ['exogenous_lstm'],
                #n_blocks=[4, 4, 4], n_layers=[4, 4, 16],
                #n_hidden=[[1024, 1024, 1024, 1024], [1024, 1024, 1024, 1024],  [1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024,1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024]],
                n_harmonics=0,  # not used with exogenous_tcn
-               n_polynomials=0,  # not used with exogenous_tcn
+               n_polynomials=2,  # not used with exogenous_tcn
                x_s_n_hidden=0,
                exogenous_n_channels=len(string_cols),
                include_var_dict=include_var_dict,
                t_cols=ts_dataset.t_cols,
                batch_normalization=True,
                dropout_prob_theta=0.5,
-               dropout_prob_exogenous=0,
-               learning_rate=0.0001679911,
+               dropout_prob_exogenous=0.5,
+               learning_rate=0.000977993,
                lr_decay=0.9,
                n_lr_decay_steps=3,
                early_stopping=10,
-               weight_decay=0.01,
+               weight_decay=0.00500772,
                l1_theta=0,
                n_iterations=5000,
                loss='MAE',
-               loss_hypar=0.2945645988,
+               loss_hypar=0.5,
                val_loss='MAE',
                seasonality=7,  # not used: only used with MASE loss
                random_seed=1)
 
 
-model.fit(train_ts_loader=train_loader, val_ts_loader=val_loader, eval_steps=50)
+model.fit(train_ts_loader=train_loader, val_ts_loader=val_loader, eval_steps=100)
 # 保存模型的状态字典
 model_dir = 'model'  # 指定保存模型的路径
-model_id = 'nbeats_model-8-16-1024'  # 给模型命名
+model_id = 'nbeats_model-10-15-1024-best'  # 给模型命名
 print(time)
 # 保存模型
 model.save(model_dir, model_id)
@@ -172,9 +172,9 @@ def create_loader(current_history, model, input_size,history_data_x, batch_size=
     test_loader = TimeSeriesLoader(
         model='nbeats',
         ts_dataset=test_dataset,
-        window_sampling_limit=30,
+        window_sampling_limit=8,
         offset=0,
-        input_size=30,
+        input_size=input_size,
         output_size=1,
         idx_to_sample_freq=1,
         batch_size=1,
@@ -213,7 +213,7 @@ for i in range(forecast_length):
     #print(current_history)
 
     # 创建当前历史数据的加载器
-    current_loader = create_loader(current_history, model='nbeats', input_size=30,history_data_x=history_data_x)
+    current_loader = create_loader(current_history, model='nbeats', input_size=7,history_data_x=history_data_x)
     # 使用模型进行预测
     y_true,y_hat_today, *_ = model.predict(ts_loader=current_loader, return_decomposition=False) # 获取预测结果
     #y_hat = model.predict(ts_loader=current_loader, return_decomposition=False)
@@ -256,3 +256,31 @@ mape = np.mean(np.abs((actuals - np.array(predictions)) / actuals)) * 100
 print(f'MSE: {mse:.4f}')
 print(f'MAE: {mae:.4f}')
 print(f'MAPE: {mape:.2f}%')
+
+errors = np.array(predictions) - actuals
+plt.figure(figsize=(10, 5))
+plt.hist(errors, bins=30, color='red', alpha=0.7)
+plt.title('Error Distribution')
+plt.xlabel('Prediction Error')
+plt.ylabel('Frequency')
+plt.grid(True)
+plt.show()
+
+import matplotlib.pyplot as plt
+
+# 获取训练和验证损失
+train_losses = model.trajectories['train_loss']
+val_losses = model.trajectories['val_loss']
+iterations = model.trajectories['iteration']
+
+# 绘制损失曲线
+plt.figure(figsize=(10, 5))
+plt.plot(iterations, train_losses, label='Training Loss')
+plt.plot(iterations, val_losses, label='Validation Loss')
+plt.title('Training and Validation Loss')
+plt.xlabel('Iteration')
+plt.ylabel('Loss')
+plt.legend()
+plt.grid(True)
+plt.show()
+

@@ -1,0 +1,217 @@
+# train_mask: 1 to keep, 0 to mask
+train_mask = np.ones(len(Y_df))
+train_mask[-3587:] = 0 # Last week of data (168 hours)
+#train_mask[-3600:] = 0
+
+ts_dataset = TimeSeriesDataset(Y_df=Y_df, X_df=X_df, S_df=S_df, ts_train_mask=train_mask)
+
+
+# Handling numerical and string data dynamically
+numerical_cols = X_df.select_dtypes(include=[np.number]).columns
+string_cols = X_df.select_dtypes(include=[object, 'category']).columns
+label_encoders = {}
+for col in string_cols:
+    le = LabelEncoder()
+    X_df[col] = le.fit_transform(X_df[col].astype(str))
+    label_encoders[col] = le
+
+'''
+his_data_x = Y_df.iloc[-(8 + 7):-7]
+new_ = his_data_x.iloc[-1].copy()  # 复制最后一行以保持结构
+print(new_[0])
+print(new_['ds'])
+'''
+#new_entry['ds'] = future_dates[i]  # 更新日期为未来日期
+#new_entry['y'] = actuals[i]  # 使用实际值而非预测值
+    # 转换 unique_id 为整数，递增后转换回字符串
+#new_['unique_id'] = str(int(his_data_x['unique_id'].iloc[-1]) + 1)
+
+# 打印 t_cols 确认
+#print(ts_dataset.t_cols)
+# 加载对象。采样数据集对象的窗口。
+# 有关每个参数的更多信息，请参阅 Loader 对象上的注释。
+train_loader = TimeSeriesLoader(model='nbeats',
+                                ts_dataset=ts_dataset,
+                                window_sampling_limit=5382,  # 4 years of data
+                                offset=0,
+                                input_size=7,  # Last 7 days
+                                output_size=1,  # Predict 1 day
+                                idx_to_sample_freq=1,  # Sampling frequency of 1 day
+                                batch_size=1024,
+                                is_train_loader=True,
+                                shuffle=False)
+
+# 验证加载器（注意：在此示例中，我们还对预测期进行了验证）
+
+val_loader = TimeSeriesLoader(model='nbeats',
+                              ts_dataset=ts_dataset,
+                              window_sampling_limit=3587,  # 4 years of data
+                              offset=0,
+                              input_size=7,  # Last 7 days
+                              output_size=1,  # Predict 1 day
+                              idx_to_sample_freq=1,  # Sampling frequency of 1 day
+                              batch_size=1024,
+                              is_train_loader=False,
+                              shuffle=False)
+
+print(dir(val_loader))
+# 包含要包含的滞后变量的字典。
+include_var_dict = { 'y': list(range(-7, 0)),  # 过去30天的土壤湿度
+                    'GustDir': list(range(-7, 0)),
+                    'GustSpd': list(range(-7, 0)),
+                    'WindRun': list(range(-7, 0)),
+                    'Rain': list(range(-7, 0)),
+                    'Tmean': list(range(-7, 0)),
+                    'Tmax': list(range(-7, 0)),
+                    'Tmin': list(range(-7, 0)),
+                    'Tgmin': list(range(-7, 0)),
+                    'VapPress': list(range(-7, 0)),
+                    'ET10': list(range(-7, 0)),
+                    'Rad': list(range(-7, 0)),
+                    'week_day': [-1]}  # Last day of the week
+
+model = Nbeats(input_size_multiplier=7,  # Last 7 days
+               output_size=1,  # Predict 1 day
+               shared_weights=False,
+               initialization='he_normal',#'he_uniform'
+               activation='relu',
+               stack_types=['seasonality']+['identity']+ ['exogenous_lstm']+['trend'] ,
+               n_blocks=[4, 4, 4, 4],
+               n_layers=[4, 4, 4, 4],
+               n_hidden=[[1024, 1024,1024, 1024], [1024, 1024,1024, 1024],[256,256,256,256], [1024,1024,1024,1024]],
+               #stack_types=['seasonality']+['identity']+ ['exogenous_lstm'],
+               #n_blocks=[4, 4, 4], n_layers=[4, 4, 16],
+               #n_hidden=[[1024, 1024, 1024, 1024], [1024, 1024, 1024, 1024],  [1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024,1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024]],
+               n_harmonics=0,  # not used with exogenous_tcn
+               n_polynomials=2,  # not used with exogenous_tcn
+               x_s_n_hidden=0,
+               exogenous_n_channels=len(string_cols),
+               include_var_dict=include_var_dict,
+               t_cols=ts_dataset.t_cols,
+               batch_normalization=True,
+               dropout_prob_theta=0.5,
+               dropout_prob_exogenous=0.5,
+               learning_rate=0.000977993,
+               lr_decay=0.9,
+               n_lr_decay_steps=3,
+               early_stopping=10,
+               weight_decay=0.00500772,
+               l1_theta=0,
+               n_iterations=5000,
+               loss='MAE',
+               loss_hypar=0.5,
+               val_loss='MAE',
+               seasonality=7,  # not used: only used with MASE loss
+               random_seed=1)
+
+the best result
+MSE: 1.7070
+MAE: 1.0334
+MAPE: 2.17%
+
+这是最佳的参数
+# train_mask: 1 to keep, 0 to mask
+train_mask = np.ones(len(Y_df))
+train_mask[-3587:] = 0 # Last week of data (168 hours)
+#train_mask[-3600:] = 0
+
+ts_dataset = TimeSeriesDataset(Y_df=Y_df, X_df=X_df, S_df=S_df, ts_train_mask=train_mask)
+
+
+# Handling numerical and string data dynamically
+numerical_cols = X_df.select_dtypes(include=[np.number]).columns
+string_cols = X_df.select_dtypes(include=[object, 'category']).columns
+label_encoders = {}
+for col in string_cols:
+    le = LabelEncoder()
+    X_df[col] = le.fit_transform(X_df[col].astype(str))
+    label_encoders[col] = le
+
+'''
+his_data_x = Y_df.iloc[-(8 + 7):-7]
+new_ = his_data_x.iloc[-1].copy()  # 复制最后一行以保持结构
+print(new_[0])
+print(new_['ds'])
+'''
+#new_entry['ds'] = future_dates[i]  # 更新日期为未来日期
+#new_entry['y'] = actuals[i]  # 使用实际值而非预测值
+    # 转换 unique_id 为整数，递增后转换回字符串
+#new_['unique_id'] = str(int(his_data_x['unique_id'].iloc[-1]) + 1)
+
+# 打印 t_cols 确认
+#print(ts_dataset.t_cols)
+# 加载对象。采样数据集对象的窗口。
+# 有关每个参数的更多信息，请参阅 Loader 对象上的注释。
+train_loader = TimeSeriesLoader(model='nbeats',
+                                ts_dataset=ts_dataset,
+                                window_sampling_limit=5382,  # 4 years of data
+                                offset=0,
+                                input_size=7,  # Last 7 days
+                                output_size=1,  # Predict 1 day
+                                idx_to_sample_freq=1,  # Sampling frequency of 1 day
+                                batch_size=1024,
+                                is_train_loader=True,
+                                shuffle=False)
+
+# 验证加载器（注意：在此示例中，我们还对预测期进行了验证）
+
+val_loader = TimeSeriesLoader(model='nbeats',
+                              ts_dataset=ts_dataset,
+                              window_sampling_limit=3587,  # 4 years of data
+                              offset=0,
+                              input_size=7,  # Last 7 days
+                              output_size=1,  # Predict 1 day
+                              idx_to_sample_freq=1,  # Sampling frequency of 1 day
+                              batch_size=1024,
+                              is_train_loader=False,
+                              shuffle=False)
+
+print(dir(val_loader))
+# 包含要包含的滞后变量的字典。
+include_var_dict = { 'y': list(range(-7, 0)),  # 过去30天的土壤湿度
+                    'GustDir': list(range(-7, 0)),
+                    'GustSpd': list(range(-7, 0)),
+                    'WindRun': list(range(-7, 0)),
+                    'Rain': list(range(-7, 0)),
+                    'Tmean': list(range(-7, 0)),
+                    'Tmax': list(range(-7, 0)),
+                    'Tmin': list(range(-7, 0)),
+                    'Tgmin': list(range(-7, 0)),
+                    'VapPress': list(range(-7, 0)),
+                    'ET10': list(range(-7, 0)),
+                    'Rad': list(range(-7, 0)),
+                    'week_day': [-1]}  # Last day of the week
+
+model = Nbeats(input_size_multiplier=7,  # Last 7 days
+               output_size=1,  # Predict 1 day
+               shared_weights=False,
+               initialization='he_normal',#'he_uniform'
+               activation='relu',
+               stack_types=['seasonality']+['identity']+ ['exogenous_lstm']+['trend'] ,
+               n_blocks=[4, 4, 4, 4],
+               n_layers=[4, 4, 3, 4],
+               n_hidden=[[1024, 1024,1024, 1024], [1024, 1024,1024, 1024],[512,512,512], [1024,1024,1024,1024]],
+               #stack_types=['seasonality']+['identity']+ ['exogenous_lstm'],
+               #n_blocks=[4, 4, 4], n_layers=[4, 4, 16],
+               #n_hidden=[[1024, 1024, 1024, 1024], [1024, 1024, 1024, 1024],  [1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024,1024, 1024, 1024, 1024, 1024, 1024, 1024, 1024]],
+               n_harmonics=0,  # not used with exogenous_tcn
+               n_polynomials=2,  # not used with exogenous_tcn
+               x_s_n_hidden=0,
+               exogenous_n_channels=len(string_cols),
+               include_var_dict=include_var_dict,
+               t_cols=ts_dataset.t_cols,
+               batch_normalization=True,
+               dropout_prob_theta=0.5,
+               dropout_prob_exogenous=0.5,
+               learning_rate=0.000977993,
+               lr_decay=0.9,
+               n_lr_decay_steps=3,
+               early_stopping=10,
+               weight_decay=0.00500772,
+               l1_theta=0,
+               n_iterations=5000,
+               loss='MAE',
+               loss_hypar=0.5,
+               val_loss='MAE',
+               seasonality=7,  # not used: only used with MASE loss
+               random_seed=1)

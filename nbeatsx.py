@@ -61,12 +61,12 @@ print(new_['ds'])
 # 有关每个参数的更多信息，请参阅 Loader 对象上的注释。
 train_loader = TimeSeriesLoader(model='nbeats',
                                 ts_dataset=ts_dataset,
-                                window_sampling_limit=365*20,  # 4 years of data
+                                window_sampling_limit=8969,  # 4 years of data
                                 offset=0,
                                 input_size=30,  # Last 7 days
                                 output_size=1,  # Predict 1 day
                                 idx_to_sample_freq=1,  # Sampling frequency of 1 day
-                                batch_size=1024,
+                                batch_size=32,
                                 is_train_loader=True,
                                 shuffle=True)
 
@@ -74,12 +74,12 @@ train_loader = TimeSeriesLoader(model='nbeats',
 
 val_loader = TimeSeriesLoader(model='nbeats',
                               ts_dataset=ts_dataset,
-                              window_sampling_limit=365*20,  # 4 years of data
+                              window_sampling_limit=8969,  # 4 years of data
                               offset=0,
                               input_size=30,  # Last 7 days
                               output_size=1,  # Predict 1 day
                               idx_to_sample_freq=1,  # Sampling frequency of 1 day
-                              batch_size=1024,
+                              batch_size=32,
                               is_train_loader=False,
                               shuffle=False)
 

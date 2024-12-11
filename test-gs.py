@@ -15,7 +15,7 @@ from losses import MAELoss
 
 # Load and preprocess data
 directory = 'D:/nbeatsx3/NBEATSX/NBEATSx/data'
-filename = 'updated_processed_weather_data.csv'
+filename = 'imputed_data_ITer.csv'
 Y_df, X_df, S_df = EPF.load(directory, filename)
 
 # Handling numerical and string data dynamically
@@ -136,7 +136,7 @@ def objective(**params):
     return val_loss
 
 # 执行贝叶斯优化
-res = gp_minimize(objective, space, n_calls=50, random_state=0)
+res = gp_minimize(objective, space, n_calls=60, random_state=0)
 
 # 将结果列表转换为DataFrame并保存到CSV文件
 results_df = pd.DataFrame(results_list)

@@ -2,8 +2,23 @@ import torch
 import torch.nn as nn
 
 class LSTMBlock(nn.Module):
+    def __init__(self, input_size, hidden_size, output_size, num_layers, dropout_prob):
+        super(LSTMBlock, self).__init__()
+        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True, dropout=dropout_prob)
+        self.fc = nn.Linear(hidden_size, output_size)
+
+    def forward(self, x):
+        lstm_out, _ = self.lstm(x)  # lstm_out: [batch_size, seq_length, hidden_size]
+        # 通过线性层，将每个时间步的输出映射到 output_size
+        lstm_out = self.fc(lstm_out)  # lstm_out: [batch_size, seq_length, output_size]
+        return lstm_out
+
+
+
+'''
+class LSTMBlock(nn.Module):
     """A single LSTM block for processing sequences."""
-    def __init__(self, input_size, hidden_size, output_size, num_layers=2, dropout_prob=0.2):
+    def __init__(self, input_size, hidden_size, output_size, num_layers=8, dropout_prob=0.2):
         super(LSTMBlock, self).__init__()
         # LSTM 层
         self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True, dropout=dropout_prob)
@@ -23,6 +38,7 @@ class LSTMBlock(nn.Module):
         # 应用激活函数
         #out = self.relu(out)
         return out
+'''
 '''
 import torch
 import numpy as np
